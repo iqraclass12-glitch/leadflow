@@ -12,9 +12,7 @@ function toCsvUrl(input: string): string | null {
 }
 
 export const fetchGoogleSheetCsv = createServerFn({ method: "POST" })
-  .inputValidator((input) =>
-    z.object({ url: z.string().url().max(1000) }).parse(input),
-  )
+  .inputValidator((input) => z.object({ url: z.string().url().max(1000) }).parse(input))
   .handler(async ({ data }) => {
     const csvUrl = toCsvUrl(data.url);
     if (!csvUrl) {
@@ -33,7 +31,8 @@ export const fetchGoogleSheetCsv = createServerFn({ method: "POST" })
       if (ct.includes("text/html") || /<html[\s>]/i.test(csv.slice(0, 500))) {
         return {
           ok: false as const,
-          error: 'Google returned a login page. Open the sheet → Share → "Anyone with the link can view", then retry.',
+          error:
+            'Google returned a login page. Open the sheet → Share → "Anyone with the link can view", then retry.',
         };
       }
       return { ok: true as const, csv };

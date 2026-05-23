@@ -5,7 +5,13 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Upload, FileSpreadsheet, Link2, Loader2, Users } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
@@ -21,17 +27,16 @@ export const Route = createFileRoute("/_authenticated/import")({
 
 type Group = { id: string; group_name: string };
 
-
 /** Pick the value of the first column whose header (case-insensitive) matches any candidate. */
 function pick(row: Record<string, string>, candidates: string[]): string {
   const keys = Object.keys(row);
   for (const c of candidates) {
-    const k = keys.find(h => h.trim().toLowerCase() === c);
+    const k = keys.find((h) => h.trim().toLowerCase() === c);
     if (k && row[k]?.toString().trim()) return row[k].toString().trim();
   }
   // fallback: substring match
   for (const c of candidates) {
-    const k = keys.find(h => h.toLowerCase().includes(c));
+    const k = keys.find((h) => h.toLowerCase().includes(c));
     if (k && row[k]?.toString().trim()) return row[k].toString().trim();
   }
   return "";
@@ -61,11 +66,12 @@ function ImportPage() {
     setGroups((groupsData as Group[] | undefined) ?? []);
   }, [groupsData]);
 
-
   const handleCsvText = (text: string) => {
     const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true });
     if (parsed.errors.length) toast.warning(`Parsed with ${parsed.errors.length} warnings`);
-    const data = (parsed.data ?? []).filter(r => Object.values(r).some(v => v && String(v).trim()));
+    const data = (parsed.data ?? []).filter((r) =>
+      Object.values(r).some((v) => v && String(v).trim()),
+    );
     setRows(data);
     setHeaders(parsed.meta.fields ?? []);
     toast.success(`Loaded ${data.length} rows`);
@@ -85,12 +91,15 @@ function ImportPage() {
     setFetching(true);
     const r = await fetchSheet({ data: { url: sheetUrl.trim() } });
     setFetching(false);
-    if (!r.ok) { toast.error(r.error); return; }
+    if (!r.ok) {
+      toast.error(r.error);
+      return;
+    }
     handleCsvText(r.csv);
   };
 
   const preview = useMemo(() => {
-    return rows.slice(0, 5).map(r => ({
+    return rows.slice(0, 5).map((r) => ({
       name: pick(r, ["name", "student name", "full name"]),
       phone: pick(r, ["number", "phone", "phone number", "mobile", "contact"]),
     }));
@@ -99,19 +108,34 @@ function ImportPage() {
   const runImport = async () => {
     setImporting(true);
     try {
-      const records = rows.map(r => ({
-        name: pick(r, ["name", "student name", "full name"]),
-        phone: pick(r, ["number", "phone", "phone number", "mobile", "contact"]),
-      })).filter(r => r.name && r.phone);
-      if (records.length === 0) { toast.error("No rows with both Name and Number found."); return; }
+      const records = rows
+        .map((r) => ({
+          name: pick(r, ["name", "student name", "full name"]),
+          phone: pick(r, ["number", "phone", "phone number", "mobile", "contact"]),
+        }))
+        .filter((r) => r.name && r.phone);
+      if (records.length === 0) {
+        toast.error("No rows with both Name and Number found.");
+        return;
+      }
       if (!user) return;
-      const r = await importFn({ userId: user.id, rows: records, groupId: groupId === "none" ? null : groupId });
-      const groupName = groups.find(g => g.id === groupId)?.group_name;
-      toast.success(`Total ${r.total} · Uploaded ${r.inserted} · Duplicates ${r.duplicates} · Invalid ${r.invalid} · Failed ${r.failed}${groupName ? ` → ${groupName}` : ""}`);
-      setRows([]); setHeaders([]); setSheetUrl("");
+      const r = await importFn({
+        userId: user.id,
+        rows: records,
+        groupId: groupId === "none" ? null : groupId,
+      });
+      const groupName = groups.find((g) => g.id === groupId)?.group_name;
+      toast.success(
+        `Total ${r.total} · Uploaded ${r.inserted} · Duplicates ${r.duplicates} · Invalid ${r.invalid} · Failed ${r.failed}${groupName ? ` → ${groupName}` : ""}`,
+      );
+      setRows([]);
+      setHeaders([]);
+      setSheetUrl("");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Import failed");
-    } finally { setImporting(false); }
+    } finally {
+      setImporting(false);
+    }
   };
 
   if (loading || !isAdmin) return null;
@@ -121,43 +145,79 @@ function ImportPage() {
       <div className="mb-4">
         <h1 className="text-xl sm:text-2xl font-semibold">Import leads</h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-          Upload CSV/Excel or paste a public Google Sheet link. Only <strong>Name</strong> and <strong>Number</strong> are imported.
+          Upload CSV/Excel or paste a public Google Sheet link. Only <strong>Name</strong> and{" "}
+          <strong>Number</strong> are imported.
         </p>
       </div>
 
       <Card className="p-3 sm:p-4 mb-3 flex flex-col sm:flex-row sm:items-center gap-2">
-        <Label className="flex items-center gap-1.5 text-sm shrink-0"><Users className="size-4 text-primary" /> Group</Label>
+        <Label className="flex items-center gap-1.5 text-sm shrink-0">
+          <Users className="size-4 text-primary" /> Group
+        </Label>
         <Select value={groupId} onValueChange={setGroupId}>
-          <SelectTrigger className="sm:w-64"><SelectValue placeholder="Select a group (optional)" /></SelectTrigger>
+          <SelectTrigger className="sm:w-64">
+            <SelectValue placeholder="Select a group (optional)" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">No group</SelectItem>
-            {groups.map(g => <SelectItem key={g.id} value={g.id}>{g.group_name}</SelectItem>)}
+            {groups.map((g) => (
+              <SelectItem key={g.id} value={g.id}>
+                {g.group_name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        <p className="text-[11px] text-muted-foreground sm:ml-2">All uploaded leads will be added to this group. Manage groups from Admin → Groups.</p>
+        <p className="text-[11px] text-muted-foreground sm:ml-2">
+          All uploaded leads will be added to this group. Manage groups from Admin → Groups.
+        </p>
       </Card>
-
 
       <div className="grid md:grid-cols-2 gap-4">
         <Card className="p-5">
-          <div className="flex items-center gap-2 mb-3"><FileSpreadsheet className="size-5 text-primary" /><h2 className="font-semibold">Upload file</h2></div>
+          <div className="flex items-center gap-2 mb-3">
+            <FileSpreadsheet className="size-5 text-primary" />
+            <h2 className="font-semibold">Upload file</h2>
+          </div>
           <label className="block border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/40 hover:bg-muted">
             <Upload className="size-6 mx-auto text-muted-foreground mb-2" />
             <div className="text-sm font-medium">Drop or click to upload</div>
             <div className="text-xs text-muted-foreground mt-1">.csv, .xlsx, .xls</div>
-            <input type="file" className="hidden" accept=".csv,.xlsx,.xls"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
+            <input
+              type="file"
+              className="hidden"
+              accept=".csv,.xlsx,.xls"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleFile(f);
+                e.target.value = "";
+              }}
+            />
           </label>
         </Card>
 
         <Card className="p-5">
-          <div className="flex items-center gap-2 mb-3"><Link2 className="size-5 text-primary" /><h2 className="font-semibold">Google Sheet URL</h2></div>
+          <div className="flex items-center gap-2 mb-3">
+            <Link2 className="size-5 text-primary" />
+            <h2 className="font-semibold">Google Sheet URL</h2>
+          </div>
           <Label>Public sheet link</Label>
-          <Input value={sheetUrl} onChange={(e) => setSheetUrl(e.target.value)} placeholder="https://docs.google.com/spreadsheets/d/…" />
+          <Input
+            value={sheetUrl}
+            onChange={(e) => setSheetUrl(e.target.value)}
+            placeholder="https://docs.google.com/spreadsheets/d/…"
+          />
           <Button onClick={handleSheetUrl} disabled={fetching || !sheetUrl} className="w-full mt-3">
-            {fetching ? <><Loader2 className="size-4 animate-spin mr-1" /> Fetching…</> : "Fetch sheet"}
+            {fetching ? (
+              <>
+                <Loader2 className="size-4 animate-spin mr-1" /> Fetching…
+              </>
+            ) : (
+              "Fetch sheet"
+            )}
           </Button>
-          <p className="text-xs text-muted-foreground mt-2">Share &gt; "Anyone with the link can view".</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Share &gt; "Anyone with the link can view".
+          </p>
         </Card>
       </div>
 
@@ -166,20 +226,29 @@ function ImportPage() {
           <div className="flex items-center justify-between mb-3">
             <div>
               <h2 className="font-semibold">Preview</h2>
-              <p className="text-xs text-muted-foreground">{rows.length} rows detected · {headers.length} columns (only Name & Number used)</p>
+              <p className="text-xs text-muted-foreground">
+                {rows.length} rows detected · {headers.length} columns (only Name & Number used)
+              </p>
             </div>
           </div>
 
           <div className="overflow-x-auto border rounded-md mb-4">
             <table className="w-full text-xs">
               <thead className="bg-muted">
-                <tr><th className="px-3 py-2 text-left font-medium">Name</th><th className="px-3 py-2 text-left font-medium">Number</th></tr>
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">Name</th>
+                  <th className="px-3 py-2 text-left font-medium">Number</th>
+                </tr>
               </thead>
               <tbody>
                 {preview.map((r, i) => (
                   <tr key={i} className="border-t">
-                    <td className="px-3 py-2">{r.name || <span className="text-muted-foreground italic">missing</span>}</td>
-                    <td className="px-3 py-2 tabular-nums">{r.phone || <span className="text-muted-foreground italic">missing</span>}</td>
+                    <td className="px-3 py-2">
+                      {r.name || <span className="text-muted-foreground italic">missing</span>}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">
+                      {r.phone || <span className="text-muted-foreground italic">missing</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -187,9 +256,23 @@ function ImportPage() {
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => { setRows([]); setHeaders([]); }}>Cancel</Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRows([]);
+                setHeaders([]);
+              }}
+            >
+              Cancel
+            </Button>
             <Button onClick={runImport} disabled={importing}>
-              {importing ? <><Loader2 className="size-4 animate-spin mr-1" /> Importing…</> : `Import ${rows.length} rows`}
+              {importing ? (
+                <>
+                  <Loader2 className="size-4 animate-spin mr-1" /> Importing…
+                </>
+              ) : (
+                `Import ${rows.length} rows`
+              )}
             </Button>
           </div>
         </Card>

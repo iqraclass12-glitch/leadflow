@@ -1,4 +1,6 @@
 import { mutation, query } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { TableNames } from "./_generated/dataModel";
 import { v } from "convex/values";
 
 const ROLES = ["admin", "manager", "caller"] as const;
@@ -18,28 +20,34 @@ function normalizePhone(phone: string) {
   return n;
 }
 
-async function getRole(ctx: any, userId: string) {
+type Ctx = QueryCtx | MutationCtx;
+
+async function getRole(ctx: Ctx, userId: string) {
   const roles = await ctx.db
     .query("user_roles")
-    .withIndex("by_user", (q: any) => q.eq("user_id", userId))
+    .withIndex("by_user", (q) => q.eq("user_id", userId))
     .collect();
-  return roles.some((r: any) => r.role === "admin") ? "admin" : roles[0]?.role ?? "manager";
+  return roles.some((r) => r.role === "admin") ? "admin" : (roles[0]?.role ?? "manager");
 }
 
-async function assertAdmin(ctx: any, userId: string) {
+async function assertAdmin(ctx: Ctx, userId: string) {
   const role = await getRole(ctx, userId);
   if (role !== "admin") throw new Error("Forbidden: admin only");
 }
 
-async function profileName(ctx: any, userId: string) {
+async function profileName(ctx: Ctx, userId: string) {
   const profile = await ctx.db
     .query("profiles")
-    .withIndex("by_profile_id", (q: any) => q.eq("id", userId))
+    .withIndex("by_profile_id", (q) => q.eq("id", userId))
     .first();
   return profile?.name ?? profile?.email?.split("@")[0] ?? null;
 }
 
-async function deleteByPublicId(ctx: any, table: any, id: string) {
+async function deleteByPublicId<Table extends TableNames>(
+  ctx: MutationCtx,
+  table: Table,
+  id: string,
+) {
   const normalized = ctx.db.normalizeId(table, id);
   if (normalized) await ctx.db.delete(normalized);
 }
@@ -123,10 +131,17 @@ export const listLeadNotes = query({
 });
 
 export const listContributions = query({
-  args: { leadId: v.optional(v.string()), managerId: v.optional(v.string()), limit: v.optional(v.number()) },
+  args: {
+    leadId: v.optional(v.string()),
+    managerId: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
     let rows = args.leadId
-      ? await ctx.db.query("lead_contributions").withIndex("by_lead", (q) => q.eq("lead_id", args.leadId!)).collect()
+      ? await ctx.db
+          .query("lead_contributions")
+          .withIndex("by_lead", (q) => q.eq("lead_id", args.leadId!))
+          .collect()
       : await ctx.db.query("lead_contributions").collect();
     if (args.managerId) rows = rows.filter((r) => r.manager_id === args.managerId);
     rows.sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -135,7 +150,11 @@ export const listContributions = query({
 });
 
 export const listActivity = query({
-  args: { userId: v.optional(v.string()), action: v.optional(v.string()), limit: v.optional(v.number()) },
+  args: {
+    userId: v.optional(v.string()),
+    action: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
     let rows = await ctx.db.query("activity_log").collect();
     if (args.userId) rows = rows.filter((r) => r.user_id === args.userId);
@@ -165,36 +184,49 @@ export const adminOverview = query({
   args: { userId: v.string(), since: v.string() },
   handler: async (ctx, args) => {
     await assertAdmin(ctx, args.userId);
-    const [profiles, roles, contributions, activities, leads, groups, leadGroups] = await Promise.all([
-      ctx.db.query("profiles").collect(),
-      ctx.db.query("user_roles").collect(),
-      ctx.db.query("lead_contributions").collect(),
-      ctx.db.query("activity_log").collect(),
-      ctx.db.query("leads").collect(),
-      ctx.db.query("groups").collect(),
-      ctx.db.query("lead_groups").collect(),
-    ]);
+    const [profiles, roles, contributions, activities, leads, groups, leadGroups] =
+      await Promise.all([
+        ctx.db.query("profiles").collect(),
+        ctx.db.query("user_roles").collect(),
+        ctx.db.query("lead_contributions").collect(),
+        ctx.db.query("activity_log").collect(),
+        ctx.db.query("leads").collect(),
+        ctx.db.query("groups").collect(),
+        ctx.db.query("lead_groups").collect(),
+      ]);
     return {
       profiles: profiles.map(toPublic),
       roles: roles.map(toPublic),
-      contributions: contributions.filter((c: any) => c.created_at >= args.since).map(toPublic),
-      activities: activities.filter((a: any) => a.created_at >= args.since && a.action === "call").map(toPublic),
+      contributions: contributions.filter((c) => c.created_at >= args.since).map(toPublic),
+      activities: activities
+        .filter((a) => a.created_at >= args.since && a.action === "call")
+        .map(toPublic),
       leadCount: leads.length,
-      groups: groups.sort((a: any, b: any) => a.group_name.localeCompare(b.group_name)).map(toPublic),
+      groups: groups.sort((a, b) => a.group_name.localeCompare(b.group_name)).map(toPublic),
       leadGroups: leadGroups.map(toPublic),
     };
   },
 });
 
 export const updateLead = mutation({
-  args: { userId: v.string(), leadId: v.string(), status: v.string(), note: v.optional(v.string()), releaseLock: v.boolean() },
+  args: {
+    userId: v.string(),
+    leadId: v.string(),
+    status: v.string(),
+    note: v.optional(v.string()),
+    releaseLock: v.boolean(),
+  },
   handler: async (ctx, args) => {
     const id = ctx.db.normalizeId("leads", args.leadId);
     if (!id) throw new Error("Lead not found");
     const lead = await ctx.db.get(id);
     if (!lead) throw new Error("Lead not found");
     const now = nowIso();
-    await ctx.db.patch(id, { status: args.status, updated_at: now, ...(args.note ? { notes: args.note } : {}) });
+    await ctx.db.patch(id, {
+      status: args.status,
+      updated_at: now,
+      ...(args.note ? { notes: args.note } : {}),
+    });
     if (lead.status !== args.status) {
       await ctx.db.insert("lead_contributions", {
         lead_id: args.leadId,
@@ -205,7 +237,12 @@ export const updateLead = mutation({
       });
     }
     if (args.note) {
-      await ctx.db.insert("lead_notes", { lead_id: args.leadId, author_id: args.userId, note: args.note, created_at: now });
+      await ctx.db.insert("lead_notes", {
+        lead_id: args.leadId,
+        author_id: args.userId,
+        note: args.note,
+        created_at: now,
+      });
       await ctx.db.insert("lead_contributions", {
         lead_id: args.leadId,
         manager_id: args.userId,
@@ -214,7 +251,8 @@ export const updateLead = mutation({
         created_at: now,
       });
     }
-    if (args.releaseLock) await ctx.db.patch(id, { locked_by: undefined, lock_expires_at: undefined });
+    if (args.releaseLock)
+      await ctx.db.patch(id, { locked_by: undefined, lock_expires_at: undefined });
     return { ok: true };
   },
 });
@@ -274,7 +312,10 @@ export const deleteLeads = mutation({
     await assertAdmin(ctx, args.userId);
     for (const id of args.ids) {
       await deleteByPublicId(ctx, "leads", id);
-      const links = await ctx.db.query("lead_groups").withIndex("by_lead", (q: any) => q.eq("lead_id", id)).collect();
+      const links = await ctx.db
+        .query("lead_groups")
+        .withIndex("by_lead", (q) => q.eq("lead_id", id))
+        .collect();
       for (const link of links) await ctx.db.delete(link._id);
     }
     return { ok: true, deleted: args.ids.length };
@@ -339,9 +380,10 @@ export const importLeads = mutation({
       for (const leadId of [...insertedIds, ...existingIds]) {
         const exists = await ctx.db
           .query("lead_groups")
-          .withIndex("by_lead_group", (q: any) => q.eq("lead_id", leadId).eq("group_id", args.groupId!))
+          .withIndex("by_lead_group", (q) => q.eq("lead_id", leadId).eq("group_id", args.groupId!))
           .first();
-        if (!exists) await ctx.db.insert("lead_groups", { lead_id: leadId, group_id: args.groupId });
+        if (!exists)
+          await ctx.db.insert("lead_groups", { lead_id: leadId, group_id: args.groupId });
       }
     }
     const duplicates = total - invalid - seen.size + existingIds.length;
@@ -353,7 +395,10 @@ export const createGroup = mutation({
   args: { userId: v.string(), name: v.string() },
   handler: async (ctx, args) => {
     await assertAdmin(ctx, args.userId);
-    const id = await ctx.db.insert("groups", { group_name: args.name.trim(), created_by: args.userId });
+    const id = await ctx.db.insert("groups", {
+      group_name: args.name.trim(),
+      created_by: args.userId,
+    });
     return { id: String(id), group_name: args.name.trim() };
   },
 });
@@ -374,17 +419,27 @@ export const deleteGroup = mutation({
   handler: async (ctx, args) => {
     await assertAdmin(ctx, args.userId);
     await deleteByPublicId(ctx, "groups", args.id);
-    const links = await ctx.db.query("lead_groups").withIndex("by_group", (q: any) => q.eq("group_id", args.id)).collect();
+    const links = await ctx.db
+      .query("lead_groups")
+      .withIndex("by_group", (q) => q.eq("group_id", args.id))
+      .collect();
     for (const link of links) await ctx.db.delete(link._id);
     return { ok: true };
   },
 });
 
 export const setUserRole = mutation({
-  args: { userId: v.string(), targetUserId: v.string(), role: v.union(v.literal("admin"), v.literal("manager")) },
+  args: {
+    userId: v.string(),
+    targetUserId: v.string(),
+    role: v.union(v.literal("admin"), v.literal("manager")),
+  },
   handler: async (ctx, args) => {
     await assertAdmin(ctx, args.userId);
-    const existing = await ctx.db.query("user_roles").withIndex("by_user", (q: any) => q.eq("user_id", args.targetUserId)).collect();
+    const existing = await ctx.db
+      .query("user_roles")
+      .withIndex("by_user", (q) => q.eq("user_id", args.targetUserId))
+      .collect();
     for (const row of existing) await ctx.db.delete(row._id);
     await ctx.db.insert("user_roles", { user_id: args.targetUserId, role: args.role });
     return { ok: true };
@@ -395,8 +450,12 @@ export const setUserSuspended = mutation({
   args: { userId: v.string(), targetUserId: v.string(), suspended: v.boolean() },
   handler: async (ctx, args) => {
     await assertAdmin(ctx, args.userId);
-    if (args.userId === args.targetUserId && args.suspended) throw new Error("You cannot suspend your own account");
-    const profile = await ctx.db.query("profiles").withIndex("by_profile_id", (q: any) => q.eq("id", args.targetUserId)).first();
+    if (args.userId === args.targetUserId && args.suspended)
+      throw new Error("You cannot suspend your own account");
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_profile_id", (q) => q.eq("id", args.targetUserId))
+      .first();
     if (!profile) throw new Error("Profile not found");
     await ctx.db.patch(profile._id, { suspended: args.suspended });
     const user = ctx.db.normalizeId("users", args.targetUserId);

@@ -1,5 +1,8 @@
 node_modules
 dist
+.npm-cache
+.wrangler
+.tanstack
 .output
 .vinxi
 pnpm-lock.yaml

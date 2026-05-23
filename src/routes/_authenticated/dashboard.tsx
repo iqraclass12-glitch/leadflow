@@ -22,21 +22,23 @@ type Counts = {
 };
 
 const EMPTY: Counts = {
-  total: 0, pending: 0, interested: 0, joined: 0, myAssigned: 0, todayActivity: 0,
-  byStatus: Object.fromEntries(STATUSES.map(s => [s, 0])) as Record<LeadStatus, number>,
+  total: 0,
+  pending: 0,
+  interested: 0,
+  joined: 0,
+  myAssigned: 0,
+  todayActivity: 0,
+  byStatus: Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<LeadStatus, number>,
 };
 
 function Dashboard() {
   const { user, isAdmin, profileName } = useAuth();
-  const data = useQuery(
-    api.crm.dashboardStats,
-    user ? { userId: user.id, isAdmin } : "skip",
-  );
+  const data = useQuery(api.crm.dashboardStats, user ? { userId: user.id, isAdmin } : "skip");
   const loading = data === undefined;
   const stats = useMemo<Counts>(() => {
     if (!data) return EMPTY;
     const list = data.leads as { id: string; status: LeadStatus; assigned_to?: string | null }[];
-    const byStatus = Object.fromEntries(STATUSES.map(s => [s, 0])) as Record<LeadStatus, number>;
+    const byStatus = Object.fromEntries(STATUSES.map((s) => [s, 0])) as Record<LeadStatus, number>;
     let myAssigned = 0;
     for (const l of list) {
       if (byStatus[l.status] !== undefined) byStatus[l.status]++;
@@ -58,12 +60,17 @@ function Dashboard() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">SAPE Education Fair</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {profileName ? `Welcome back, ${profileName}.` : "Welcome back."} Live overview of your leads & activity.
+          {profileName ? `Welcome back, ${profileName}.` : "Welcome back."} Live overview of your
+          leads & activity.
         </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-        <StatCard icon={Users} label={isAdmin ? "Total leads" : "Visible leads"} value={stats.total} />
+        <StatCard
+          icon={Users}
+          label={isAdmin ? "Total leads" : "Visible leads"}
+          value={stats.total}
+        />
         <StatCard icon={ListChecks} label="My assigned" value={stats.myAssigned} />
         <StatCard icon={Clock} label="Pending" value={stats.pending} />
         <StatCard icon={CheckCircle2} label="Interested" value={stats.interested} />
@@ -84,13 +91,20 @@ function Dashboard() {
                 const pct = stats.total ? (c / stats.total) * 100 : 0;
                 return (
                   <div key={status} className="flex items-center gap-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border w-32 justify-center ${statusColor(status)}`}>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border w-32 justify-center ${statusColor(status)}`}
+                    >
                       {status}
                     </span>
                     <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
                     </div>
-                    <span className="text-sm tabular-nums text-muted-foreground w-12 text-right">{c}</span>
+                    <span className="text-sm tabular-nums text-muted-foreground w-12 text-right">
+                      {c}
+                    </span>
                   </div>
                 );
               })}
@@ -104,7 +118,9 @@ function Dashboard() {
           </div>
           <div className="text-4xl font-semibold tabular-nums mt-2">{stats.todayActivity}</div>
           <p className="text-xs text-muted-foreground mt-1">
-            {isAdmin ? "All actions logged today by your team." : "Calls, status updates, and notes you logged today."}
+            {isAdmin
+              ? "All actions logged today by your team."
+              : "Calls, status updates, and notes you logged today."}
           </p>
         </Card>
       </div>
@@ -112,7 +128,15 @@ function Dashboard() {
   );
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: typeof Users; label: string; value: number }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Users;
+  label: string;
+  value: number;
+}) {
   return (
     <Card className="p-4">
       <div className="size-9 rounded-md flex items-center justify-center mb-3 bg-primary/10 text-primary">

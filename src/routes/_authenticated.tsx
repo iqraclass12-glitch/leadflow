@@ -2,7 +2,18 @@ import { createFileRoute, Outlet, Link, useNavigate, useLocation } from "@tansta
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/hooks/use-theme";
-import { LayoutDashboard, Users, LogOut, Loader2, Moon, Sun, ShieldCheck, History, GraduationCap, User } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  LogOut,
+  Loader2,
+  Moon,
+  Sun,
+  ShieldCheck,
+  History,
+  GraduationCap,
+  User,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
@@ -75,7 +86,9 @@ function AuthLayout() {
                 key={it.to}
                 to={it.to}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition ${
-                  active ? "bg-primary/10 text-primary font-medium" : "text-foreground hover:bg-accent"
+                  active
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-foreground hover:bg-accent"
                 }`}
               >
                 <Icon className="size-4" /> {it.label}
@@ -107,7 +120,10 @@ function AuthLayout() {
         </div>
         <div className="flex items-center gap-3">
           <ThemeToggle compact />
-          <button onClick={() => signOut()} className="text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground">
+          <button
+            onClick={() => signOut()}
+            className="text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground"
+          >
             <LogOut className="size-3.5" /> Sign out
           </button>
         </div>

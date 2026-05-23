@@ -6,8 +6,16 @@ import { api } from "../../../convex/_generated/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  User, Mail, ShieldCheck, History, Upload, Database,
-  Users, LogOut, Loader2, RefreshCw,
+  User,
+  Mail,
+  ShieldCheck,
+  History,
+  Upload,
+  Database,
+  Users,
+  LogOut,
+  Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { contributionLabel, type Contribution } from "@/lib/leads";
@@ -20,13 +28,27 @@ type Stats = { calls: number; notes: number; statusUpdates: number; leadsCreated
 
 function ProfilePage() {
   const { user, role, profileName, isAdmin, signOut, refreshRole } = useAuth();
-  const [stats, setStats] = useState<Stats>({ calls: 0, notes: 0, statusUpdates: 0, leadsCreated: 0 });
-  const recent = (useQuery(api.crm.listContributions, user ? { managerId: user.id, limit: 20 } : "skip") as Contribution[] | undefined) ?? [];
-  const calls = (useQuery(api.crm.listActivity, user ? { userId: user.id, action: "call", limit: 10000 } : "skip") as { id: string }[] | undefined) ?? [];
+  const [stats, setStats] = useState<Stats>({
+    calls: 0,
+    notes: 0,
+    statusUpdates: 0,
+    leadsCreated: 0,
+  });
+  const recent =
+    (useQuery(api.crm.listContributions, user ? { managerId: user.id, limit: 20 } : "skip") as
+      | Contribution[]
+      | undefined) ?? [];
+  const calls =
+    (useQuery(
+      api.crm.listActivity,
+      user ? { userId: user.id, action: "call", limit: 10000 } : "skip",
+    ) as { id: string }[] | undefined) ?? [];
   const callCount = calls.length;
   const loading = !user || recent === undefined;
 
-  useEffect(() => { refreshRole(); }, []);
+  useEffect(() => {
+    refreshRole();
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -34,7 +56,8 @@ function ProfilePage() {
     for (const c of recent) {
       if (c.contribution_type === "note_added") s.notes++;
       else if (c.contribution_type === "status_updated") s.statusUpdates++;
-      else if (c.contribution_type === "lead_created" || c.contribution_type === "import_added") s.leadsCreated++;
+      else if (c.contribution_type === "lead_created" || c.contribution_type === "import_added")
+        s.leadsCreated++;
     }
     setStats(s);
   }, [user, recent, callCount]);
@@ -53,7 +76,9 @@ function ProfilePage() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-semibold truncate">{profileName ?? user.email}</h1>
-            <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${isAdmin ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full capitalize ${isAdmin ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}
+            >
               {isAdmin && <ShieldCheck className="size-3 inline mr-1" />}
               {role ?? "member"}
             </span>
@@ -79,17 +104,33 @@ function ProfilePage() {
             <ShieldCheck className="size-4" /> Admin features
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            <FeatureLink to="/admin" icon={<ShieldCheck className="size-5 text-primary" />} title="Admin Dashboard" desc="Manage users, groups & activity" />
-            <FeatureLink to="/import" icon={<Upload className="size-5 text-primary" />} title="Upload Leads" desc="Import leads via CSV into a group" />
-            <FeatureLink to="/leads" icon={<Database className="size-5 text-primary" />} title="All Leads" desc="View & assign every lead" />
+            <FeatureLink
+              to="/admin"
+              icon={<ShieldCheck className="size-5 text-primary" />}
+              title="Admin Dashboard"
+              desc="Manage users, groups & activity"
+            />
+            <FeatureLink
+              to="/import"
+              icon={<Upload className="size-5 text-primary" />}
+              title="Upload Leads"
+              desc="Import leads via CSV into a group"
+            />
+            <FeatureLink
+              to="/leads"
+              icon={<Database className="size-5 text-primary" />}
+              title="All Leads"
+              desc="View & assign every lead"
+            />
           </div>
-
         </div>
       )}
 
       {/* Stats */}
       <div>
-        <h2 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Your activity</h2>
+        <h2 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
+          Your activity
+        </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Stat label="Calls made" value={stats.calls} />
           <Stat label="Notes added" value={stats.notes} />
@@ -105,19 +146,25 @@ function ProfilePage() {
             <History className="size-4 text-muted-foreground" />
             <h3 className="font-medium text-sm">Recent history</h3>
           </div>
-          <Link to="/history" className="text-xs text-primary hover:underline">View all →</Link>
+          <Link to="/history" className="text-xs text-primary hover:underline">
+            View all →
+          </Link>
         </div>
         {loading ? (
-          <div className="p-8 flex justify-center"><Loader2 className="size-5 animate-spin text-muted-foreground" /></div>
+          <div className="p-8 flex justify-center">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          </div>
         ) : recent.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">No activity yet.</div>
         ) : (
           <ul className="divide-y">
-            {recent.map(c => (
+            {recent.map((c) => (
               <li key={c.id} className="px-4 py-3 flex items-center justify-between gap-3 text-sm">
                 <div className="min-w-0">
                   <div className="font-medium">{contributionLabel(c.contribution_type)}</div>
-                  {c.description && <div className="text-xs text-muted-foreground truncate">{c.description}</div>}
+                  {c.description && (
+                    <div className="text-xs text-muted-foreground truncate">{c.description}</div>
+                  )}
                 </div>
                 <div className="text-xs text-muted-foreground whitespace-nowrap">
                   {format(new Date(c.created_at), "MMM d, HH:mm")}
@@ -130,14 +177,25 @@ function ProfilePage() {
 
       {!isAdmin && (
         <p className="text-xs text-muted-foreground text-center">
-          You have <span className="font-medium">{callCount}</span> calls and {recent.length} recent actions on record.
+          You have <span className="font-medium">{callCount}</span> calls and {recent.length} recent
+          actions on record.
         </p>
       )}
     </div>
   );
 }
 
-function FeatureLink({ to, icon, title, desc }: { to: string; icon: React.ReactNode; title: string; desc: string }) {
+function FeatureLink({
+  to,
+  icon,
+  title,
+  desc,
+}: {
+  to: string;
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+}) {
   return (
     <Link to={to} className="block">
       <Card className="p-4 hover:border-primary/40 transition h-full">

@@ -6,20 +6,42 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { LeadDialog } from "@/components/LeadDialog";
-import { PhoneCall, Search, MessageCircle, RefreshCw, Trash2, X, Lock, LockOpen, Users } from "lucide-react";
+import {
+  PhoneCall,
+  Search,
+  MessageCircle,
+  RefreshCw,
+  Trash2,
+  X,
+  Lock,
+  LockOpen,
+  Users,
+} from "lucide-react";
 import type { Lead } from "@/lib/leads";
 import { STATUSES, statusColor, buildWhatsAppUrl } from "@/lib/leads";
 import { TEMPLATES, DEFAULT_TEMPLATE_ID, getTemplate, renderTemplate } from "@/templates/messages";
 import { useAuth } from "@/hooks/use-auth";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
-
 
 export const Route = createFileRoute("/_authenticated/leads")({
   component: LeadsPage,
@@ -58,7 +80,10 @@ function LeadsPage() {
   const [leadGroupMap, setLeadGroupMap] = useState<Record<string, string[]>>({});
   const [tplId, setTplId] = useState<string>(DEFAULT_TEMPLATE_ID);
 
-  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
     if (leadsData === undefined) return;
@@ -72,7 +97,7 @@ function LeadsPage() {
 
   useEffect(() => {
     const map: Record<string, string[]> = {};
-    ((leadGroupsData as { lead_id: string; group_id: string }[] | undefined) ?? []).forEach(r => {
+    ((leadGroupsData as { lead_id: string; group_id: string }[] | undefined) ?? []).forEach((r) => {
       (map[r.lead_id] ??= []).push(r.group_id);
     });
     setLeadGroupMap(map);
@@ -80,12 +105,14 @@ function LeadsPage() {
 
   useEffect(() => {
     const map: Record<string, string> = {};
-    ((profilesData as { id: string; name?: string | null; email?: string | null }[] | undefined) ?? []).forEach(p => {
+    (
+      (profilesData as { id: string; name?: string | null; email?: string | null }[] | undefined) ??
+      []
+    ).forEach((p) => {
       map[p.id] = p.name ?? p.email ?? p.id.slice(0, 6);
     });
     setLockerNames(map);
   }, [profilesData]);
-
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -97,7 +124,7 @@ function LeadsPage() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const qDigits = q.replace(/\D+/g, "");
-    return leads.filter(l => {
+    return leads.filter((l) => {
       if (statusFilter !== "all" && l.status !== statusFilter) return false;
       if (groupFilter !== "all") {
         const gs = leadGroupMap[l.id] ?? [];
@@ -113,23 +140,35 @@ function LeadsPage() {
   }, [leads, search, statusFilter, groupFilter, leadGroupMap]);
 
   const openWhatsApp = (l: Lead) => {
-    if (!l.phone) { toast.error("No phone number"); return; }
+    if (!l.phone) {
+      toast.error("No phone number");
+      return;
+    }
     const tpl = getTemplate(tplId);
     const msg = renderTemplate(tpl, l.name);
     const url = buildWhatsAppUrl({ phone: l.phone, message: msg });
     if (url) window.open(url, "_blank", "noopener");
   };
 
-
-  const isLockedByOther = useCallback((l: LeadWithLock) => {
-    return !!l.locked_by && l.locked_by !== user?.id && !!l.lock_expires_at && new Date(l.lock_expires_at).getTime() > now;
-  }, [user?.id, now]);
+  const isLockedByOther = useCallback(
+    (l: LeadWithLock) => {
+      return (
+        !!l.locked_by &&
+        l.locked_by !== user?.id &&
+        !!l.lock_expires_at &&
+        new Date(l.lock_expires_at).getTime() > now
+      );
+    },
+    [user?.id, now],
+  );
 
   const onCall = async (l: LeadWithLock, e: React.MouseEvent<HTMLAnchorElement>) => {
     if (!user) return;
     if (isLockedByOther(l)) {
       e.preventDefault();
-      toast.error(`${lockerNames[l.locked_by!] ?? "Another manager"} is currently calling this lead.`);
+      toast.error(
+        `${lockerNames[l.locked_by!] ?? "Another manager"} is currently calling this lead.`,
+      );
       return;
     }
     const row = await acquireLeadLock({ userId: user.id, leadId: l.id });
@@ -161,17 +200,17 @@ function LeadsPage() {
     toast.success("Released");
   };
 
-
   const toggleSelect = (id: string) => {
-    setSelected(prev => {
+    setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
   const toggleAll = () => {
     if (selected.size === filtered.length) setSelected(new Set());
-    else setSelected(new Set(filtered.map(l => l.id)));
+    else setSelected(new Set(filtered.map((l) => l.id)));
   };
 
   const doDelete = async () => {
@@ -184,7 +223,9 @@ function LeadsPage() {
       setSelected(new Set());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Delete failed");
-    } finally { setDeleting(false); }
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -207,7 +248,9 @@ function LeadsPage() {
         <div className="md:hidden sticky top-14 z-30 -mx-3 px-3 py-2 bg-background/95 backdrop-blur border-b mb-3">
           <div className="flex items-center gap-1.5 mb-1.5">
             <Users className="size-3.5 text-muted-foreground" />
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Group</span>
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+              Group
+            </span>
             {groupFilter !== "all" && (
               <span className="ml-auto text-[11px] text-muted-foreground">
                 {filtered.length} lead{filtered.length === 1 ? "" : "s"}
@@ -218,13 +261,17 @@ function LeadsPage() {
             <button
               onClick={() => setGroupFilter("all")}
               className={`snap-start shrink-0 text-xs px-3 py-1.5 rounded-full border font-medium ${groupFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-input"}`}
-            >All</button>
-            {groups.map(g => (
+            >
+              All
+            </button>
+            {groups.map((g) => (
               <button
                 key={g.id}
                 onClick={() => setGroupFilter(g.id)}
                 className={`snap-start shrink-0 text-xs px-3 py-1.5 rounded-full border font-medium ${groupFilter === g.id ? "bg-primary text-primary-foreground border-primary" : "bg-background border-input"}`}
-              >{g.group_name}</button>
+              >
+                {g.group_name}
+              </button>
             ))}
           </div>
         </div>
@@ -242,10 +289,16 @@ function LeadsPage() {
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="md:w-44"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectTrigger className="md:w-44">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
-              {STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {STATUSES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           {/* Desktop group dropdown — mobile uses sticky pills above */}
@@ -256,11 +309,23 @@ function LeadsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All groups</SelectItem>
-              {groups.map(g => <SelectItem key={g.id} value={g.id}>{g.group_name}</SelectItem>)}
+              {groups.map((g) => (
+                <SelectItem key={g.id} value={g.id}>
+                  {g.group_name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           {(search || statusFilter !== "all" || groupFilter !== "all") && (
-            <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setStatusFilter("all"); setGroupFilter("all"); }}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("all");
+                setGroupFilter("all");
+              }}
+            >
               <X className="size-3.5" /> Clear
             </Button>
           )}
@@ -269,15 +334,20 @@ function LeadsPage() {
           <div className="flex items-center gap-2 text-xs">
             <span className="text-muted-foreground shrink-0">WhatsApp template:</span>
             <Select value={tplId} onValueChange={setTplId}>
-              <SelectTrigger className="h-8 flex-1 sm:w-56 sm:flex-none"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 flex-1 sm:w-56 sm:flex-none">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {TEMPLATES.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}
+                {TEMPLATES.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
         )}
       </Card>
-
 
       {isAdmin && selected.size > 0 && (
         <Card className="p-3 mb-3 flex items-center justify-between shadow-sm border-red-200 bg-red-50/40 dark:bg-red-950/20">
@@ -290,14 +360,20 @@ function LeadsPage() {
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Delete {selected.size} lead{selected.size > 1 ? "s" : ""}?</AlertDialogTitle>
+                <AlertDialogTitle>
+                  Delete {selected.size} lead{selected.size > 1 ? "s" : ""}?
+                </AlertDialogTitle>
                 <AlertDialogDescription>
-                  This permanently removes the lead{selected.size > 1 ? "s" : ""} and all their notes & activity. This cannot be undone.
+                  This permanently removes the lead{selected.size > 1 ? "s" : ""} and all their
+                  notes & activity. This cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={doDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                <AlertDialogAction
+                  onClick={doDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
                   Delete
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -307,7 +383,9 @@ function LeadsPage() {
       )}
 
       {(() => {
-        const active = leads.filter(l => l.locked_by && l.lock_expires_at && new Date(l.lock_expires_at).getTime() > now);
+        const active = leads.filter(
+          (l) => l.locked_by && l.lock_expires_at && new Date(l.lock_expires_at).getTime() > now,
+        );
         if (active.length === 0) return null;
         return (
           <Card className="p-3 mb-4 shadow-sm border-amber-300 bg-amber-50/70 dark:bg-amber-950/20">
@@ -318,10 +396,13 @@ function LeadsPage() {
               </h2>
             </div>
             <div className="space-y-1.5">
-              {active.map(l => {
+              {active.map((l) => {
                 const mine = l.locked_by === user?.id;
                 const lockerName = mine ? "You" : (lockerNames[l.locked_by!] ?? "Another manager");
-                const secondsLeft = Math.max(0, Math.floor((new Date(l.lock_expires_at!).getTime() - now) / 1000));
+                const secondsLeft = Math.max(
+                  0,
+                  Math.floor((new Date(l.lock_expires_at!).getTime() - now) / 1000),
+                );
                 const mm = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
                 const ss = String(secondsLeft % 60).padStart(2, "0");
                 return (
@@ -332,10 +413,15 @@ function LeadsPage() {
                   >
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium truncate">
-                        {l.name} <span className="text-muted-foreground font-normal">· {l.phone || "—"}</span>
+                        {l.name}{" "}
+                        <span className="text-muted-foreground font-normal">
+                          · {l.phone || "—"}
+                        </span>
                       </div>
                       <div className="text-[11px] text-amber-800 dark:text-amber-300">
-                        {mine ? "You are calling this lead" : `${lockerName} is calling — do not call`}
+                        {mine
+                          ? "You are calling this lead"
+                          : `${lockerName} is calling — do not call`}
                       </div>
                     </div>
                     <span className="shrink-0 text-[11px] tabular-nums font-medium text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/40 border border-amber-300 px-1.5 py-0.5 rounded">
@@ -365,7 +451,10 @@ function LeadsPage() {
                   <tr>
                     {isAdmin && (
                       <th className="px-3 py-3 w-8">
-                        <Checkbox checked={selected.size > 0 && selected.size === filtered.length} onCheckedChange={toggleAll} />
+                        <Checkbox
+                          checked={selected.size > 0 && selected.size === filtered.length}
+                          onCheckedChange={toggleAll}
+                        />
                       </th>
                     )}
                     <th className="px-4 py-3">Name</th>
@@ -377,86 +466,110 @@ function LeadsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.slice(0, 500).map(l => {
+                  {filtered.slice(0, 500).map((l) => {
                     const locked = isLockedByOther(l);
                     return (
-                    <tr key={l.id} className={`border-t cursor-pointer ${locked ? "bg-amber-50/60 hover:bg-amber-100/60" : "hover:bg-muted"}`} onClick={() => setOpenLeadId(l.id)}>
-                      {isAdmin && (
-                        <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                          <Checkbox checked={selected.has(l.id)} onCheckedChange={() => toggleSelect(l.id)} />
-                        </td>
-                      )}
-                      <td className="px-4 py-3 font-medium">
-                        <div className="flex items-center gap-2">
-                          <span>{l.name}</span>
-                          {(() => {
-                            const mine = l.locked_by === user?.id && l.lock_expires_at && new Date(l.lock_expires_at).getTime() > now;
-                            if (mine) {
+                      <tr
+                        key={l.id}
+                        className={`border-t cursor-pointer ${locked ? "bg-amber-50/60 hover:bg-amber-100/60" : "hover:bg-muted"}`}
+                        onClick={() => setOpenLeadId(l.id)}
+                      >
+                        {isAdmin && (
+                          <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selected.has(l.id)}
+                              onCheckedChange={() => toggleSelect(l.id)}
+                            />
+                          </td>
+                        )}
+                        <td className="px-4 py-3 font-medium">
+                          <div className="flex items-center gap-2">
+                            <span>{l.name}</span>
+                            {(() => {
+                              const mine =
+                                l.locked_by === user?.id &&
+                                l.lock_expires_at &&
+                                new Date(l.lock_expires_at).getTime() > now;
+                              if (mine) {
+                                return (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void releaseLead(l);
+                                    }}
+                                    title="Release lock"
+                                    className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 border border-primary/40 px-1.5 py-0.5 rounded hover:bg-primary/20"
+                                  >
+                                    <LockOpen className="size-3" /> Release
+                                  </button>
+                                );
+                              }
+                              if (locked) return null;
                               return (
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); void releaseLead(l); }}
-                                  title="Release lock"
-                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 border border-primary/40 px-1.5 py-0.5 rounded hover:bg-primary/20"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    void claimLead(l);
+                                  }}
+                                  title="Lock this lead so other managers don't call it"
+                                  className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted border border-input px-1.5 py-0.5 rounded hover:bg-accent hover:text-accent-foreground"
                                 >
-                                  <LockOpen className="size-3" /> Release
+                                  <Lock className="size-3" /> Lock
                                 </button>
                               );
-                            }
-                            if (locked) return null;
-                            return (
+                            })()}
+                          </div>
+                          {locked && (
+                            <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded">
+                              <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              {lockerNames[l.locked_by!] ?? "Manager"} is calling
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 tabular-nums">{l.phone || "—"}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${statusColor(l.status)}`}
+                          >
+                            {l.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate">
+                          {l.notes || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(l.updated_at), { addSuffix: true })}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {l.phone && (
+                            <div className="inline-flex items-center gap-1">
                               <button
-                                onClick={(e) => { e.stopPropagation(); void claimLead(l); }}
-                                title="Lock this lead so other managers don't call it"
-                                className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted border border-input px-1.5 py-0.5 rounded hover:bg-accent hover:text-accent-foreground"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openWhatsApp(l);
+                                }}
+                                title="WhatsApp"
+                                className="inline-flex items-center justify-center size-7 rounded-md border border-input bg-background hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300"
                               >
-                                <Lock className="size-3" /> Lock
+                                <MessageCircle className="size-3.5" />
                               </button>
-                            );
-                          })()}
-                        </div>
-                        {locked && (
-
-                          <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-medium text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded">
-                            <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
-                            {lockerNames[l.locked_by!] ?? "Manager"} is calling
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 tabular-nums">{l.phone || "—"}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${statusColor(l.status)}`}>
-                          {l.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground max-w-[200px] truncate">
-                        {l.notes || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(l.updated_at), { addSuffix: true })}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {l.phone && (
-                          <div className="inline-flex items-center gap-1">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); openWhatsApp(l); }}
-                              title="WhatsApp"
-                              className="inline-flex items-center justify-center size-7 rounded-md border border-input bg-background hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300"
-                            >
-                              <MessageCircle className="size-3.5" />
-                            </button>
-                            <a
-                              href={locked ? undefined : `tel:${l.phone}`}
-                              aria-disabled={locked}
-                              onClick={(e) => { e.stopPropagation(); void onCall(l, e); }}
-                              className={`inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md ${locked ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary text-primary-foreground hover:opacity-90"}`}
-                            >
-                              <PhoneCall className="size-3.5" /> {locked ? "In call" : "Call"}
-                            </a>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );})}
+                              <a
+                                href={locked ? undefined : `tel:${l.phone}`}
+                                aria-disabled={locked}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void onCall(l, e);
+                                }}
+                                className={`inline-flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-md ${locked ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary text-primary-foreground hover:opacity-90"}`}
+                              >
+                                <PhoneCall className="size-3.5" /> {locked ? "In call" : "Call"}
+                              </a>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
               {filtered.length > 500 && (
@@ -469,108 +582,147 @@ function LeadsPage() {
 
           {/* Mobile cards */}
           <div className="md:hidden space-y-2">
-            {filtered.slice(0, 200).map(l => {
+            {filtered.slice(0, 200).map((l) => {
               const locked = isLockedByOther(l);
-              const mine = l.locked_by === user?.id && l.lock_expires_at && new Date(l.lock_expires_at).getTime() > now;
+              const mine =
+                l.locked_by === user?.id &&
+                l.lock_expires_at &&
+                new Date(l.lock_expires_at).getTime() > now;
               const groupNames = (leadGroupMap[l.id] ?? [])
-                .map(gid => groups.find(g => g.id === gid)?.group_name)
+                .map((gid) => groups.find((g) => g.id === gid)?.group_name)
                 .filter(Boolean) as string[];
-              const lockSecs = l.lock_expires_at ? Math.max(0, Math.floor((new Date(l.lock_expires_at).getTime() - now) / 1000)) : 0;
+              const lockSecs = l.lock_expires_at
+                ? Math.max(0, Math.floor((new Date(l.lock_expires_at).getTime() - now) / 1000))
+                : 0;
               const mm = String(Math.floor(lockSecs / 60)).padStart(2, "0");
               const ss = String(lockSecs % 60).padStart(2, "0");
               return (
-              <Card
-                key={l.id}
-                className={`p-3 shadow-sm ${locked ? "border-2 border-amber-400 bg-amber-50/80 dark:bg-amber-950/30" : mine ? "border-2 border-primary/50 bg-primary/5" : ""}`}
-                onClick={() => setOpenLeadId(l.id)}
-              >
-                {/* Prominent lock banner on top */}
-                {locked && (
-                  <div className="-m-3 mb-2 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/40 border-b-2 border-amber-400 rounded-t-lg flex items-center gap-2">
-                    <span className="size-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                    <span className="text-xs font-semibold text-amber-900 dark:text-amber-200 flex-1 truncate">
-                      {lockerNames[l.locked_by!] ?? "Another manager"} is calling
-                    </span>
-                    <span className="text-[11px] tabular-nums font-bold text-amber-900 dark:text-amber-200 bg-white/70 dark:bg-black/30 px-1.5 py-0.5 rounded border border-amber-300">
-                      {mm}:{ss}
-                    </span>
-                  </div>
-                )}
-                {mine && (
-                  <div className="-m-3 mb-2 px-3 py-1.5 bg-primary/15 border-b-2 border-primary/50 rounded-t-lg flex items-center gap-2">
-                    <span className="size-2 rounded-full bg-primary animate-pulse shrink-0" />
-                    <span className="text-xs font-semibold text-primary flex-1">You are calling — update status</span>
-                    <span className="text-[11px] tabular-nums font-bold text-primary bg-white/70 dark:bg-black/30 px-1.5 py-0.5 rounded border border-primary/40">
-                      {mm}:{ss}
-                    </span>
-                  </div>
-                )}
-
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-base truncate">{l.name}</div>
-                    <div className="text-sm text-muted-foreground tabular-nums mt-0.5">{l.phone || "—"}</div>
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {groupNames.map(g => (
-                        <span key={g} className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 dark:text-indigo-200 dark:bg-indigo-950/40 dark:border-indigo-900 px-1.5 py-0.5 rounded">
-                          <Users className="size-2.5" /> {g}
-                        </span>
-                      ))}
+                <Card
+                  key={l.id}
+                  className={`p-3 shadow-sm ${locked ? "border-2 border-amber-400 bg-amber-50/80 dark:bg-amber-950/30" : mine ? "border-2 border-primary/50 bg-primary/5" : ""}`}
+                  onClick={() => setOpenLeadId(l.id)}
+                >
+                  {/* Prominent lock banner on top */}
+                  {locked && (
+                    <div className="-m-3 mb-2 px-3 py-1.5 bg-amber-100 dark:bg-amber-900/40 border-b-2 border-amber-400 rounded-t-lg flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
+                      <span className="text-xs font-semibold text-amber-900 dark:text-amber-200 flex-1 truncate">
+                        {lockerNames[l.locked_by!] ?? "Another manager"} is calling
+                      </span>
+                      <span className="text-[11px] tabular-nums font-bold text-amber-900 dark:text-amber-200 bg-white/70 dark:bg-black/30 px-1.5 py-0.5 rounded border border-amber-300">
+                        {mm}:{ss}
+                      </span>
                     </div>
-                    {l.notes && <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2">{l.notes}</div>}
-                  </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium border ${statusColor(l.status)}`}>
-                      {l.status}
-                    </span>
-                    {!locked && !mine && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); void claimLead(l); }}
-                        className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted border border-input px-1.5 py-0.5 rounded"
+                  )}
+                  {mine && (
+                    <div className="-m-3 mb-2 px-3 py-1.5 bg-primary/15 border-b-2 border-primary/50 rounded-t-lg flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-primary animate-pulse shrink-0" />
+                      <span className="text-xs font-semibold text-primary flex-1">
+                        You are calling — update status
+                      </span>
+                      <span className="text-[11px] tabular-nums font-bold text-primary bg-white/70 dark:bg-black/30 px-1.5 py-0.5 rounded border border-primary/40">
+                        {mm}:{ss}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-base truncate">{l.name}</div>
+                      <div className="text-sm text-muted-foreground tabular-nums mt-0.5">
+                        {l.phone || "—"}
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {groupNames.map((g) => (
+                          <span
+                            key={g}
+                            className="inline-flex items-center gap-1 text-[10px] font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 dark:text-indigo-200 dark:bg-indigo-950/40 dark:border-indigo-900 px-1.5 py-0.5 rounded"
+                          >
+                            <Users className="size-2.5" /> {g}
+                          </span>
+                        ))}
+                      </div>
+                      {l.notes && (
+                        <div className="text-[11px] text-muted-foreground mt-1 line-clamp-2">
+                          {l.notes}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-medium border ${statusColor(l.status)}`}
                       >
-                        <Lock className="size-3" /> Lock
-                      </button>
-                    )}
-                    {mine && (
+                        {l.status}
+                      </span>
+                      {!locked && !mine && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void claimLead(l);
+                          }}
+                          className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground bg-muted border border-input px-1.5 py-0.5 rounded"
+                        >
+                          <Lock className="size-3" /> Lock
+                        </button>
+                      )}
+                      {mine && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void releaseLead(l);
+                          }}
+                          className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 border border-primary/40 px-1.5 py-0.5 rounded"
+                        >
+                          <LockOpen className="size-3" /> Release
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {l.phone && (
+                    <div className="mt-3 flex gap-2">
                       <button
-                        onClick={(e) => { e.stopPropagation(); void releaseLead(l); }}
-                        className="inline-flex items-center gap-1 text-[10px] font-medium text-primary bg-primary/10 border border-primary/40 px-1.5 py-0.5 rounded"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openWhatsApp(l);
+                        }}
+                        className="inline-flex items-center justify-center size-11 rounded-md border border-input bg-background hover:bg-emerald-50 hover:text-emerald-700"
+                        aria-label="WhatsApp"
                       >
-                        <LockOpen className="size-3" /> Release
+                        <MessageCircle className="size-5" />
                       </button>
-                    )}
-                  </div>
-                </div>
-                {l.phone && (
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); openWhatsApp(l); }}
-                      className="inline-flex items-center justify-center size-11 rounded-md border border-input bg-background hover:bg-emerald-50 hover:text-emerald-700"
-                      aria-label="WhatsApp"
-                    >
-                      <MessageCircle className="size-5" />
-                    </button>
-                    <a
-                      href={locked ? undefined : `tel:${l.phone}`}
-                      aria-disabled={locked}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (locked) { e.preventDefault(); toast.error(`${lockerNames[l.locked_by!] ?? "Another manager"} is on this lead.`); return; }
-                        void onCall(l, e);
-                      }}
-                      className={`flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-medium py-3 rounded-md ${locked ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary text-primary-foreground active:opacity-80"}`}
-                    >
-                      <PhoneCall className="size-4" /> {locked ? "In use" : "Call"}
-                    </a>
-                  </div>
-                )}
-              </Card>
-            );})}
+                      <a
+                        href={locked ? undefined : `tel:${l.phone}`}
+                        aria-disabled={locked}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (locked) {
+                            e.preventDefault();
+                            toast.error(
+                              `${lockerNames[l.locked_by!] ?? "Another manager"} is on this lead.`,
+                            );
+                            return;
+                          }
+                          void onCall(l, e);
+                        }}
+                        className={`flex-1 inline-flex items-center justify-center gap-1.5 text-sm font-medium py-3 rounded-md ${locked ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary text-primary-foreground active:opacity-80"}`}
+                      >
+                        <PhoneCall className="size-4" /> {locked ? "In use" : "Call"}
+                      </a>
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
           </div>
         </>
       )}
 
-      <LeadDialog leadId={openLeadId} onOpenChange={(o) => { if (!o) setOpenLeadId(null); }} />
+      <LeadDialog
+        leadId={openLeadId}
+        onOpenChange={(o) => {
+          if (!o) setOpenLeadId(null);
+        }}
+      />
     </div>
   );
 }

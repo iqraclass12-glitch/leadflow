@@ -14,7 +14,7 @@ export const importLeads = mutation({
         created_by: v.optional(v.string()),
         created_at: v.string(),
         updated_at: v.string(),
-      })
+      }),
     ),
   },
   handler: async (ctx, args) => {

@@ -6,9 +6,22 @@ import { useAuth } from "@/hooks/use-auth";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  History as HistoryIcon, Phone, Activity, Search, Loader2, PhoneCall, FileText, RefreshCw,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  History as HistoryIcon,
+  Phone,
+  Activity,
+  Search,
+  Loader2,
+  PhoneCall,
+  FileText,
+  RefreshCw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { contributionLabel, contributionTone, type Contribution } from "@/lib/leads";
@@ -30,7 +43,12 @@ const ACTIONS = [
   { v: "assignment_changed", label: "Assignment changed" },
 ];
 
-interface CallRow { id: string; user_id: string; created_at: string; details: { lead_id?: string } | null }
+interface CallRow {
+  id: string;
+  user_id: string;
+  created_at: string;
+  details: { lead_id?: string } | null;
+}
 
 function HistoryPage() {
   const { user, isAdmin } = useAuth();
@@ -39,23 +57,42 @@ function HistoryPage() {
   const [managerFilter, setManagerFilter] = useState<string>("me");
 
   const effectiveManager = isAdmin ? managerFilter : "me";
-  const managerId = effectiveManager === "me" ? user?.id : effectiveManager === "all" ? undefined : effectiveManager;
-  const contribs = (useQuery(api.crm.listContributions, user ? { managerId, limit: 500 } : "skip") as Contribution[] | undefined) ?? [];
-  const calls = (useQuery(api.crm.listActivity, user ? { userId: managerId, action: "call", limit: 500 } : "skip") as CallRow[] | undefined) ?? [];
-  const leads = (useQuery(api.crm.listLeads, user ? { userId: user.id, isAdmin: true } : "skip") as LeadLite[] | undefined) ?? [];
+  const managerId =
+    effectiveManager === "me"
+      ? user?.id
+      : effectiveManager === "all"
+        ? undefined
+        : effectiveManager;
+  const contribs =
+    (useQuery(api.crm.listContributions, user ? { managerId, limit: 500 } : "skip") as
+      | Contribution[]
+      | undefined) ?? [];
+  const calls =
+    (useQuery(
+      api.crm.listActivity,
+      user ? { userId: managerId, action: "call", limit: 500 } : "skip",
+    ) as CallRow[] | undefined) ?? [];
+  const leads =
+    (useQuery(api.crm.listLeads, user ? { userId: user.id, isAdmin: true } : "skip") as
+      | LeadLite[]
+      | undefined) ?? [];
   const profiles = (useQuery(api.crm.listProfiles) as Profile[] | undefined) ?? [];
   const loading = user && contribs === undefined;
   const leadsMap = useMemo(() => Object.fromEntries(leads.map((l) => [l.id, l])), [leads]);
 
   const nameOf = (id: string) => {
-    const p = profiles.find(x => x.id === id);
+    const p = profiles.find((x) => x.id === id);
     return p?.name || p?.email?.split("@")[0] || id.slice(0, 6);
   };
 
   const rows: Row[] = useMemo(() => {
     const combined: Row[] = [];
     for (const c of contribs) {
-      combined.push({ ...c, lead: leadsMap[c.lead_id] ?? null, manager_name: nameOf(c.manager_id) });
+      combined.push({
+        ...c,
+        lead: leadsMap[c.lead_id] ?? null,
+        manager_name: nameOf(c.manager_id),
+      });
     }
     for (const c of calls) {
       const lid = c.details?.lead_id ?? "";
@@ -66,7 +103,7 @@ function HistoryPage() {
         contribution_type: "call" as unknown as Contribution["contribution_type"],
         description: null,
         created_at: c.created_at,
-        lead: lid ? leadsMap[lid] ?? null : null,
+        lead: lid ? (leadsMap[lid] ?? null) : null,
         manager_name: nameOf(c.user_id),
       });
     }
@@ -78,7 +115,7 @@ function HistoryPage() {
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
     const sd = s.replace(/\D+/g, "");
-    return rows.filter(r => {
+    return rows.filter((r) => {
       if (action !== "all" && r.contribution_type !== action) return false;
       if (s) {
         const name = r.lead?.name?.toLowerCase() ?? "";
@@ -91,7 +128,10 @@ function HistoryPage() {
 
   const stats = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
-    let callsN = 0, notes = 0, updates = 0, todayN = 0;
+    let callsN = 0,
+      notes = 0,
+      updates = 0,
+      todayN = 0;
     for (const r of filtered) {
       if (r.contribution_type === ("call" as unknown)) callsN++;
       else if (r.contribution_type === "note_added") notes++;
@@ -110,10 +150,14 @@ function HistoryPage() {
             {isAdmin && effectiveManager !== "me" ? "Activity History" : "My History"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {isAdmin ? "Filter by manager to audit individual activity." : "Your calls, status updates and notes."}
+            {isAdmin
+              ? "Filter by manager to audit individual activity."
+              : "Your calls, status updates and notes."}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => {}}><RefreshCw className="size-4" /></Button>
+        <Button variant="outline" size="sm" onClick={() => {}}>
+          <RefreshCw className="size-4" />
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -127,24 +171,39 @@ function HistoryPage() {
         <div className="flex flex-col md:flex-row gap-2">
           <div className="relative flex-1">
             <Search className="size-4 absolute left-2.5 top-2.5 text-muted-foreground" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search name or phone" className="pl-8" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search name or phone"
+              className="pl-8"
+            />
           </div>
           {isAdmin && (
             <Select value={managerFilter} onValueChange={setManagerFilter}>
-              <SelectTrigger className="md:w-44"><SelectValue placeholder="Manager" /></SelectTrigger>
+              <SelectTrigger className="md:w-44">
+                <SelectValue placeholder="Manager" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="me">My activity</SelectItem>
                 <SelectItem value="all">All managers</SelectItem>
-                {profiles.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.name ?? p.email ?? p.id.slice(0, 6)}</SelectItem>
+                {profiles.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name ?? p.email ?? p.id.slice(0, 6)}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
           <Select value={action} onValueChange={setAction}>
-            <SelectTrigger className="md:w-44"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="md:w-44">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {ACTIONS.map(a => <SelectItem key={a.v} value={a.v}>{a.label}</SelectItem>)}
+              {ACTIONS.map((a) => (
+                <SelectItem key={a.v} value={a.v}>
+                  {a.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -164,36 +223,66 @@ function HistoryPage() {
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={6} className="p-8 text-center"><Loader2 className="size-5 animate-spin inline text-muted-foreground" /></td></tr>}
-              {!loading && filtered.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-muted-foreground text-sm">No activity yet.</td></tr>}
-              {!loading && filtered.map(r => (
-                <tr key={`${r.contribution_type}-${r.id}`} className="border-t hover:bg-muted/40">
-                  <td className="px-4 py-3 font-medium">{r.lead?.name ?? <span className="text-muted-foreground">—</span>}</td>
-                  <td className="px-4 py-3">
-                    {r.lead?.phone ? (
-                      <a href={`tel:${r.lead.phone}`} className="text-primary hover:underline flex items-center gap-1">
-                        <Phone className="size-3" /> {r.lead.phone}
-                      </a>
-                    ) : "—"}
+              {loading && (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center">
+                    <Loader2 className="size-5 animate-spin inline text-muted-foreground" />
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`size-2 rounded-full ${r.contribution_type === ("call" as unknown) ? "bg-blue-500" : contributionTone(r.contribution_type)}`} />
-                      <span className="capitalize text-xs">
-                        {r.contribution_type === ("call" as unknown) ? "made a call" : contributionLabel(r.contribution_type)}
-                      </span>
-                      {r.description && (
-                        <span className="text-xs text-muted-foreground truncate max-w-[200px]">— {r.description}</span>
-                      )}
-                    </div>
-                  </td>
-                  {isAdmin && effectiveManager !== "me" && (
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{r.manager_name}</td>
-                  )}
-                  <td className="px-4 py-3 text-xs whitespace-nowrap">{format(new Date(r.created_at), "MMM d, yyyy")}</td>
-                  <td className="px-4 py-3 text-xs whitespace-nowrap">{format(new Date(r.created_at), "HH:mm:ss")}</td>
                 </tr>
-              ))}
+              )}
+              {!loading && filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground text-sm">
+                    No activity yet.
+                  </td>
+                </tr>
+              )}
+              {!loading &&
+                filtered.map((r) => (
+                  <tr key={`${r.contribution_type}-${r.id}`} className="border-t hover:bg-muted/40">
+                    <td className="px-4 py-3 font-medium">
+                      {r.lead?.name ?? <span className="text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      {r.lead?.phone ? (
+                        <a
+                          href={`tel:${r.lead.phone}`}
+                          className="text-primary hover:underline flex items-center gap-1"
+                        >
+                          <Phone className="size-3" /> {r.lead.phone}
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`size-2 rounded-full ${r.contribution_type === ("call" as unknown) ? "bg-blue-500" : contributionTone(r.contribution_type)}`}
+                        />
+                        <span className="capitalize text-xs">
+                          {r.contribution_type === ("call" as unknown)
+                            ? "made a call"
+                            : contributionLabel(r.contribution_type)}
+                        </span>
+                        {r.description && (
+                          <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            — {r.description}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    {isAdmin && effectiveManager !== "me" && (
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{r.manager_name}</td>
+                    )}
+                    <td className="px-4 py-3 text-xs whitespace-nowrap">
+                      {format(new Date(r.created_at), "MMM d, yyyy")}
+                    </td>
+                    <td className="px-4 py-3 text-xs whitespace-nowrap">
+                      {format(new Date(r.created_at), "HH:mm:ss")}
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
@@ -205,7 +294,9 @@ function HistoryPage() {
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: number }) {
   return (
     <Card className="p-3">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon} {label}</div>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        {icon} {label}
+      </div>
       <div className="text-2xl font-semibold mt-1 tabular-nums">{value}</div>
     </Card>
   );

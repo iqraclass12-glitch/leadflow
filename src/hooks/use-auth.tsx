@@ -85,11 +85,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{
-      user, session, role, profileName, loading,
-      isAdmin: role === "admin",
-      signIn, signUp, signOut, refreshRole,
-    }}>
+    <Ctx.Provider
+      value={{
+        user,
+        session,
+        role,
+        profileName,
+        loading,
+        isAdmin: role === "admin",
+        signIn,
+        signUp,
+        signOut,
+        refreshRole,
+      }}
+    >
       {children}
     </Ctx.Provider>
   );
